@@ -40,9 +40,18 @@ async function startServer() {
       await sequelize.sync({ force: false });
       console.log('Database synced successfully');
     } catch (dbError) {
-      console.warn('Database connection failed:', dbError.message);
-      console.log('Server will start without database connection');
-      console.log('To enable full functionality, please start MySQL server');
+      if (dbError.parent && dbError.parent.code === 'ER_BAD_DB_ERROR') {
+        console.warn('Database "zipportal" does not exist');
+        console.log('To create the database, run: CREATE DATABASE zipportal;');
+        console.log('Server will start without database connection');
+      } else if (dbError.name === 'SequelizeConnectionError') {
+        console.warn('Database connection failed:', dbError.message);
+        console.log('Server will start without database connection');
+        console.log('To enable full functionality, please start MySQL server');
+      } else {
+        console.warn('Database error:', dbError.message);
+        console.log('Server will start without database connection');
+      }
     }
     
     app.listen(PORT, () => {
