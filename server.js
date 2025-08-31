@@ -34,6 +34,23 @@ app.use((err, req, res, next) => {
 // Start server
 async function startServer() {
   try {
+    // Ensure required directories exist
+    const fs = require('fs');
+    const path = require('path');
+    
+    const uploadsDir = path.join(__dirname, 'uploads');
+    const tempDir = path.join(__dirname, 'temp');
+    
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+      console.log('Created uploads directory');
+    }
+    
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+      console.log('Created temp directory');
+    }
+    
     // Try to sync database, but don't fail if MySQL is not available
     try {
       await sequelize.authenticate();
@@ -45,6 +62,7 @@ async function startServer() {
       try {
         const seedSampleData = require('./seeders/sampleData');
         await seedSampleData();
+        console.log('Sample data seeded successfully');
       } catch (seedError) {
         console.warn('Failed to seed sample data:', seedError.message);
       }
@@ -79,6 +97,7 @@ async function startServer() {
           try {
             const seedSampleData = require('./seeders/sampleData');
             await seedSampleData();
+            console.log('Sample data seeded successfully');
           } catch (seedError) {
             console.warn('Failed to seed sample data:', seedError.message);
           }
