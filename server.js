@@ -41,13 +41,13 @@ async function startServer() {
       await sequelize.sync({ force: false });
       console.log('Database synced successfully');
       
-      // Try to seed sample data (commented out for now)
-      // try {
-      //   const { seedSampleData } = require('./seeders/sampleData');
-      //   await seedSampleData();
-      // } catch (seedError) {
-      //   console.warn('Failed to seed sample data:', seedError.message);
-      // }
+      // Try to seed sample data
+      try {
+        const seedSampleData = require('./seeders/sampleData');
+        await seedSampleData();
+      } catch (seedError) {
+        console.warn('Failed to seed sample data:', seedError.message);
+      }
       
     } catch (dbError) {
       if (dbError.parent && dbError.parent.code === 'ER_BAD_DB_ERROR') {
@@ -75,13 +75,13 @@ async function startServer() {
           await sequelize.sync({ force: false });
           console.log('Tables created successfully');
           
-          // Try to seed sample data (commented out for now)
-          // try {
-          //   const { seedSampleData } = require('./seeders/sampleData');
-          //   await seedSampleData();
-          // } catch (seedError) {
-          //   console.warn('Failed to seed sample data:', seedError.message);
-          // }
+          // Try to seed sample data
+          try {
+            const seedSampleData = require('./seeders/sampleData');
+            await seedSampleData();
+          } catch (seedError) {
+            console.warn('Failed to seed sample data:', seedError.message);
+          }
           
         } catch (createError) {
           console.error('Failed to create database:', createError.message);

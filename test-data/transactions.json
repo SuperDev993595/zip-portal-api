@@ -1,0 +1,16 @@
+[
+  {
+    "reference": "test-txn-001",
+    "amount": 100.00,
+    "currency": "USD",
+    "message": "Test transaction 1",
+    "timestamp": "2025-01-20T10:00:00Z"
+  },
+  {
+    "reference": "test-txn-002",
+    "amount": 50.00,
+    "currency": "EUR",
+    "message": "Test transaction 2",
+    "timestamp": "2025-01-20T11:00:00Z"
+  }
+]
