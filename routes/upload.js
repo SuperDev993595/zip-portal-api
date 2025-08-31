@@ -59,19 +59,34 @@ router.post('/', upload.single('zipFile'), async (req, res) => {
       console.log(`- ${entry.entryName}`);
     });
     
+    // Helper function to find file recursively in directory
+    const findFileRecursively = (dir, filename) => {
+      const items = fs.readdirSync(dir, { withFileTypes: true });
+      
+      for (const item of items) {
+        const fullPath = path.join(dir, item.name);
+        
+        if (item.isDirectory()) {
+          const found = findFileRecursively(fullPath, filename);
+          if (found) return found;
+        } else if (item.name === filename) {
+          return fullPath;
+        }
+      }
+      return null;
+    };
+    
     // Read and process userData.json
-    const userDataPath = path.join(tempDir, 'userData.json');
-    if (!fs.existsSync(userDataPath)) {
+    let userDataPath = findFileRecursively(tempDir, 'userData.json');
+    if (!userDataPath) {
       // Try alternative names
       const alternativeNames = ['userdata.json', 'UserData.json', 'USERDATA.json', 'user_data.json'];
       let foundUserData = false;
       
       for (const altName of alternativeNames) {
-        const altPath = path.join(tempDir, altName);
-        if (fs.existsSync(altPath)) {
+        userDataPath = findFileRecursively(tempDir, altName);
+        if (userDataPath) {
           console.log(`Found user data file with alternative name: ${altName}`);
-          // Copy to expected name
-          fs.copyFileSync(altPath, userDataPath);
           foundUserData = true;
           break;
         }
@@ -88,18 +103,16 @@ router.post('/', upload.single('zipFile'), async (req, res) => {
     const userData = JSON.parse(fs.readFileSync(userDataPath, 'utf8'));
     
     // Read and process transactions.json
-    const transactionsPath = path.join(tempDir, 'transactions.json');
-    if (!fs.existsSync(transactionsPath)) {
+    let transactionsPath = findFileRecursively(tempDir, 'transactions.json');
+    if (!transactionsPath) {
       // Try alternative names
       const alternativeNames = ['transaction.json', 'Transaction.json', 'TRANSACTION.json', 'transaction_data.json'];
       let foundTransactions = false;
       
       for (const altName of alternativeNames) {
-        const altPath = path.join(tempDir, altName);
-        if (fs.existsSync(altPath)) {
+        transactionsPath = findFileRecursively(tempDir, altName);
+        if (transactionsPath) {
           console.log(`Found transactions file with alternative name: ${altName}`);
-          // Copy to expected name
-          fs.copyFileSync(altPath, transactionsPath);
           foundTransactions = true;
           break;
         }
@@ -116,10 +129,10 @@ router.post('/', upload.single('zipFile'), async (req, res) => {
     const transactionsData = JSON.parse(fs.readFileSync(transactionsPath, 'utf8'));
     
     // Process avatar.png if exists
-    const avatarPath = path.join(tempDir, 'avatar.png');
+    const avatarPath = findFileRecursively(tempDir, 'avatar.png');
     let avatarFileName = null;
     
-    if (fs.existsSync(avatarPath)) {
+    if (avatarPath) {
       avatarFileName = `avatar-${Date.now()}.png`;
       const newAvatarPath = path.join(__dirname, '../uploads', avatarFileName);
       fs.copyFileSync(avatarPath, newAvatarPath);
