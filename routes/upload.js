@@ -78,73 +78,72 @@ router.post('/', upload.single('zipFile'), async (req, res) => {
       fs.copyFileSync(avatarPath, newAvatarPath);
     }
     
-    // Process users data
-    const processedUsers = [];
-    for (const user of userData) {
-      try {
-        const existingUser = await User.findOne({ where: { userId: user.userId } });
-        
-        if (existingUser) {
-          // Update existing user
-          await existingUser.update({
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            status: user.status,
-            avatar: avatarFileName || user.avatar
-          });
-          processedUsers.push(existingUser);
-        } else {
-          // Create new user
-          const newUser = await User.create({
-            userId: user.userId,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            status: user.status,
-            avatar: avatarFileName || user.avatar
-          });
-          processedUsers.push(newUser);
-        }
-      } catch (error) {
-        console.error(`Error processing user ${user.userId}:`, error);
+    // Process user data (single user object, not array)
+    let processedUser = null;
+    try {
+      // Generate a unique userId if not provided
+      const userId = userData.userId || `user-${Date.now()}`;
+      
+      const existingUser = await User.findOne({ where: { userId: userId } });
+      
+      if (existingUser) {
+        // Update existing user
+        await existingUser.update({
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          birthday: userData.birthday ? new Date(userData.birthday) : null,
+          country: userData.country,
+          phone: userData.phone,
+          avatar: avatarFileName || existingUser.avatar
+        });
+        processedUser = existingUser;
+      } else {
+        // Create new user
+        processedUser = await User.create({
+          userId: userId,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          birthday: userData.birthday ? new Date(userData.birthday) : null,
+          country: userData.country,
+          phone: userData.phone,
+          avatar: avatarFileName
+        });
       }
+    } catch (error) {
+      console.error('Error processing user data:', error);
+      throw new Error(`Failed to process user data: ${error.message}`);
     }
     
-    // Process transactions data
+    // Process transactions data (array of transactions)
     const processedTransactions = [];
     for (const transaction of transactionsData) {
       try {
         const existingTransaction = await Transaction.findOne({ 
-          where: { transactionId: transaction.transactionId } 
+          where: { reference: transaction.reference } 
         });
         
         if (existingTransaction) {
           // Update existing transaction
           await existingTransaction.update({
-            userId: transaction.userId,
             amount: transaction.amount,
-            type: transaction.type,
-            description: transaction.description,
-            status: transaction.status,
-            date: new Date(transaction.date)
+            currency: transaction.currency,
+            message: transaction.message,
+            timestamp: new Date(transaction.timestamp)
           });
           processedTransactions.push(existingTransaction);
         } else {
           // Create new transaction
           const newTransaction = await Transaction.create({
-            transactionId: transaction.transactionId,
-            userId: transaction.userId,
+            reference: transaction.reference,
             amount: transaction.amount,
-            type: transaction.type,
-            description: transaction.description,
-            status: transaction.status,
-            date: new Date(transaction.date)
+            currency: transaction.currency,
+            message: transaction.message,
+            timestamp: new Date(transaction.timestamp)
           });
           processedTransactions.push(newTransaction);
         }
       } catch (error) {
-        console.error(`Error processing transaction ${transaction.transactionId}:`, error);
+        console.error(`Error processing transaction ${transaction.reference}:`, error);
       }
     }
     
@@ -154,7 +153,7 @@ router.post('/', upload.single('zipFile'), async (req, res) => {
     
     res.json({
       message: 'ZIP file processed successfully',
-      usersProcessed: processedUsers.length,
+      userProcessed: !!processedUser,
       transactionsProcessed: processedTransactions.length,
       avatarProcessed: !!avatarFileName
     });
