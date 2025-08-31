@@ -1,16 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { Transaction, User } = require('../models');
+const { Transaction } = require('../models');
 
 // Get all transactions
 router.get('/', async (req, res) => {
   try {
     const transactions = await Transaction.findAll({
-      include: [{
-        model: User,
-        attributes: ['userId', 'name', 'email', 'avatar']
-      }],
-      order: [['date', 'DESC']]
+      order: [['timestamp', 'DESC']]
     });
     res.json(transactions);
   } catch (error) {
@@ -27,11 +23,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const transaction = await Transaction.findOne({
-      where: { transactionId: req.params.id },
-      include: [{
-        model: User,
-        attributes: ['userId', 'name', 'email', 'avatar']
-      }]
+      where: { reference: req.params.id }
     });
     
     if (!transaction) {
@@ -60,7 +52,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const transaction = await Transaction.findOne({ 
-      where: { transactionId: req.params.id } 
+      where: { reference: req.params.id } 
     });
     
     if (!transaction) {
@@ -79,7 +71,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const transaction = await Transaction.findOne({ 
-      where: { transactionId: req.params.id } 
+      where: { reference: req.params.id } 
     });
     
     if (!transaction) {
@@ -94,17 +86,18 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// Get transactions by user ID
+// Get transactions by user ID (removed since no association)
 router.get('/user/:userId', async (req, res) => {
   try {
+    // Since transactions are no longer associated with users,
+    // this endpoint now returns all transactions
     const transactions = await Transaction.findAll({
-      where: { userId: req.params.userId },
-      order: [['date', 'DESC']]
+      order: [['timestamp', 'DESC']]
     });
     res.json(transactions);
   } catch (error) {
-    console.error('Error fetching user transactions:', error);
-    res.status(500).json({ error: 'Failed to fetch user transactions' });
+    console.error('Error fetching transactions:', error);
+    res.status(500).json({ error: 'Failed to fetch transactions' });
   }
 });
 
