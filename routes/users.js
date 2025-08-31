@@ -1,16 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { User, Transaction } = require('../models');
+const { User } = require('../models');
 
 // Get all users
 router.get('/', async (req, res) => {
   try {
-    const users = await User.findAll({
-      include: [{
-        model: Transaction,
-        attributes: ['transactionId', 'amount', 'type', 'status', 'date']
-      }]
-    });
+    const users = await User.findAll();
     res.json(users);
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -26,11 +21,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const user = await User.findOne({
-      where: { userId: req.params.id },
-      include: [{
-        model: Transaction,
-        attributes: ['transactionId', 'amount', 'type', 'status', 'date', 'description']
-      }]
+      where: { userId: req.params.id }
     });
     
     if (!user) {
