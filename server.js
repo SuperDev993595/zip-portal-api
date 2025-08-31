@@ -13,6 +13,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve static files (for avatars)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/public', express.static(path.join(__dirname, 'public')));
 
 // Routes
 app.use('/api/users', require('./routes/users'));
@@ -41,9 +42,38 @@ async function startServer() {
       console.log('Database synced successfully');
     } catch (dbError) {
       if (dbError.parent && dbError.parent.code === 'ER_BAD_DB_ERROR') {
-        console.warn('Database "zipportal" does not exist');
-        console.log('To create the database, run: CREATE DATABASE zipportal;');
-        console.log('Server will start without database connection');
+        console.log('Database "zipportal" does not exist. Creating it now...');
+        try {
+          // Create a connection without specifying database
+          const tempSequelize = new (require('sequelize').Sequelize)('', 'root', '', {
+            host: 'localhost',
+            dialect: 'mysql',
+            logging: false
+          });
+          
+          // Create the database
+          await tempSequelize.query('CREATE DATABASE IF NOT EXISTS zipportal;');
+          console.log('Database "zipportal" created successfully');
+          
+          // Close temporary connection
+          await tempSequelize.close();
+          
+          // Now try to connect to the new database
+          await sequelize.authenticate();
+          console.log('Connected to new database successfully');
+          
+          // Create tables
+          await sequelize.sync({ force: false });
+          console.log('Tables created successfully');
+          
+          // Seed sample data
+          const { seedSampleData } = require('./seeders/sampleData');
+          await seedSampleData();
+          
+        } catch (createError) {
+          console.error('Failed to create database:', createError.message);
+          console.log('Server will start without database connection');
+        }
       } else if (dbError.name === 'SequelizeConnectionError') {
         console.warn('Database connection failed:', dbError.message);
         console.log('Server will start without database connection');
