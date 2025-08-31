@@ -55,58 +55,60 @@ async function startServer() {
     try {
       await sequelize.authenticate();
       console.log('Database connection established successfully');
-      await sequelize.sync({ force: true });
-      console.log('Database synced successfully (tables recreated)');
       
-      // Try to seed sample data
+      // Check if database exists by trying to query it
       try {
-        const seedSampleData = require('./seeders/sampleData');
-        await seedSampleData();
-        console.log('Sample data seeded successfully');
-      } catch (seedError) {
-        console.warn('Failed to seed sample data:', seedError.message);
+        await sequelize.query('SELECT 1');
+        console.log('Database "zipportal" exists, syncing tables...');
+        await sequelize.sync({ force: false }); // Don't recreate tables if they exist
+        console.log('Database synced successfully (tables preserved)');
+      } catch (queryError) {
+        if (queryError.parent && queryError.parent.code === 'ER_BAD_DB_ERROR') {
+          // Database doesn't exist, create it and seed sample data
+          console.log('Database "zipportal" does not exist. Creating it now...');
+          try {
+            // Create a connection without specifying database
+            const tempSequelize = new (require('sequelize').Sequelize)('', 'root', '', {
+              host: 'localhost',
+              dialect: 'mysql',
+              logging: false
+            });
+            
+            // Create the database
+            await tempSequelize.query('CREATE DATABASE IF NOT EXISTS zipportal;');
+            console.log('Database "zipportal" created successfully');
+            
+            // Close temporary connection
+            await tempSequelize.close();
+            
+            // Now try to connect to the new database
+            await sequelize.authenticate();
+            console.log('Connected to new database successfully');
+            
+            // Create tables
+            await sequelize.sync({ force: true });
+            console.log('Tables created successfully (recreated)');
+            
+            // Seed sample data only for new database
+            try {
+              const seedSampleData = require('./seeders/sampleData');
+              await seedSampleData();
+              console.log('Sample data seeded successfully in new database');
+            } catch (seedError) {
+              console.warn('Failed to seed sample data:', seedError.message);
+            }
+            
+          } catch (createError) {
+            console.error('Failed to create database:', createError.message);
+            console.log('Server will start without database connection');
+          }
+        } else {
+          throw queryError;
+        }
       }
       
     } catch (dbError) {
-      if (dbError.parent && dbError.parent.code === 'ER_BAD_DB_ERROR') {
-        console.log('Database "zipportal" does not exist. Creating it now...');
-        try {
-          // Create a connection without specifying database
-          const tempSequelize = new (require('sequelize').Sequelize)('', 'root', '', {
-            host: 'localhost',
-            dialect: 'mysql',
-            logging: false
-          });
-          
-          // Create the database
-          await tempSequelize.query('CREATE DATABASE IF NOT EXISTS zipportal;');
-          console.log('Database "zipportal" created successfully');
-          
-          // Close temporary connection
-          await tempSequelize.close();
-          
-          // Now try to connect to the new database
-          await sequelize.authenticate();
-          console.log('Connected to new database successfully');
-          
-          // Create tables
-          await sequelize.sync({ force: true });
-          console.log('Tables created successfully (recreated)');
-          
-          // Try to seed sample data
-          try {
-            const seedSampleData = require('./seeders/sampleData');
-            await seedSampleData();
-            console.log('Sample data seeded successfully');
-          } catch (seedError) {
-            console.warn('Failed to seed sample data:', seedError.message);
-          }
-          
-        } catch (createError) {
-          console.error('Failed to create database:', createError.message);
-          console.log('Server will start without database connection');
-        }
-      } else if (dbError.name === 'SequelizeConnectionError') {
+      if (dbError.name === 'SequelizeConnectionError') {
         console.warn('Database connection failed:', dbError.message);
         console.log('Server will start without database connection');
         console.log('To enable full functionality, please start MySQL server');
