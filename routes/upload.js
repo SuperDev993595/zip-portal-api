@@ -52,10 +52,37 @@ router.post('/', upload.single('zipFile'), async (req, res) => {
     
     zip.extractAllTo(tempDir, true);
     
+    // Debug: List all files in the ZIP
+    const zipEntries = zip.getEntries();
+    console.log('Files found in ZIP:');
+    zipEntries.forEach(entry => {
+      console.log(`- ${entry.entryName}`);
+    });
+    
     // Read and process userData.json
     const userDataPath = path.join(tempDir, 'userData.json');
     if (!fs.existsSync(userDataPath)) {
-      throw new Error('userData.json not found in ZIP file');
+      // Try alternative names
+      const alternativeNames = ['userdata.json', 'UserData.json', 'USERDATA.json', 'user_data.json'];
+      let foundUserData = false;
+      
+      for (const altName of alternativeNames) {
+        const altPath = path.join(tempDir, altName);
+        if (fs.existsSync(altPath)) {
+          console.log(`Found user data file with alternative name: ${altName}`);
+          // Copy to expected name
+          fs.copyFileSync(altPath, userDataPath);
+          foundUserData = true;
+          break;
+        }
+      }
+      
+      if (!foundUserData) {
+        // List all files in temp directory for debugging
+        const tempFiles = fs.readdirSync(tempDir);
+        console.log('Files in temp directory:', tempFiles);
+        throw new Error(`userData.json not found in ZIP file. Available files: ${tempFiles.join(', ')}`);
+      }
     }
     
     const userData = JSON.parse(fs.readFileSync(userDataPath, 'utf8'));
@@ -63,7 +90,27 @@ router.post('/', upload.single('zipFile'), async (req, res) => {
     // Read and process transactions.json
     const transactionsPath = path.join(tempDir, 'transactions.json');
     if (!fs.existsSync(transactionsPath)) {
-      throw new Error('transactions.json not found in ZIP file');
+      // Try alternative names
+      const alternativeNames = ['transaction.json', 'Transaction.json', 'TRANSACTION.json', 'transaction_data.json'];
+      let foundTransactions = false;
+      
+      for (const altName of alternativeNames) {
+        const altPath = path.join(tempDir, altName);
+        if (fs.existsSync(altPath)) {
+          console.log(`Found transactions file with alternative name: ${altName}`);
+          // Copy to expected name
+          fs.copyFileSync(altPath, transactionsPath);
+          foundTransactions = true;
+          break;
+        }
+      }
+      
+      if (!foundTransactions) {
+        // List all files in temp directory for debugging
+        const tempFiles = fs.readdirSync(tempDir);
+        console.log('Files in temp directory:', tempFiles);
+        throw new Error(`transactions.json not found in ZIP file. Available files: ${tempFiles.join(', ')}`);
+      }
     }
     
     const transactionsData = JSON.parse(fs.readFileSync(transactionsPath, 'utf8'));
