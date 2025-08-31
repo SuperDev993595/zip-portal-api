@@ -7,32 +7,24 @@ const Transaction = sequelize.define('Transaction', {
     primaryKey: true,
     autoIncrement: true
   },
-  transactionId: {
+  reference: {
     type: DataTypes.STRING,
     allowNull: false,
     unique: true
-  },
-  userId: {
-    type: DataTypes.STRING,
-    allowNull: false
   },
   amount: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false
   },
-  type: {
-    type: DataTypes.STRING,
+  currency: {
+    type: DataTypes.STRING(3),
     allowNull: false
   },
-  description: {
+  message: {
     type: DataTypes.TEXT,
     allowNull: true
   },
-  status: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  date: {
+  timestamp: {
     type: DataTypes.DATE,
     allowNull: false
   },
