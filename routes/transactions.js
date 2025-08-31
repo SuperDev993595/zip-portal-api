@@ -15,7 +15,11 @@ router.get('/', async (req, res) => {
     res.json(transactions);
   } catch (error) {
     console.error('Error fetching transactions:', error);
-    res.status(500).json({ error: 'Failed to fetch transactions' });
+    if (error.name === 'SequelizeConnectionError') {
+      res.status(503).json({ error: 'Database not available', message: 'Please start MySQL server' });
+    } else {
+      res.status(500).json({ error: 'Failed to fetch transactions' });
+    }
   }
 });
 

@@ -14,7 +14,11 @@ router.get('/', async (req, res) => {
     res.json(users);
   } catch (error) {
     console.error('Error fetching users:', error);
-    res.status(500).json({ error: 'Failed to fetch users' });
+    if (error.name === 'SequelizeConnectionError') {
+      res.status(503).json({ error: 'Database not available', message: 'Please start MySQL server' });
+    } else {
+      res.status(500).json({ error: 'Failed to fetch users' });
+    }
   }
 });
 

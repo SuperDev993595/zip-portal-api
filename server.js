@@ -33,12 +33,21 @@ app.use((err, req, res, next) => {
 // Start server
 async function startServer() {
   try {
-    // Sync database
-    await sequelize.sync({ force: false });
-    console.log('Database synced successfully');
+    // Try to sync database, but don't fail if MySQL is not available
+    try {
+      await sequelize.authenticate();
+      console.log('Database connection established successfully');
+      await sequelize.sync({ force: false });
+      console.log('Database synced successfully');
+    } catch (dbError) {
+      console.warn('Database connection failed:', dbError.message);
+      console.log('Server will start without database connection');
+      console.log('To enable full functionality, please start MySQL server');
+    }
     
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
+      console.log(`API available at http://localhost:${PORT}/api`);
     });
   } catch (error) {
     console.error('Unable to start server:', error);
