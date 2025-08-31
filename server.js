@@ -38,8 +38,8 @@ async function startServer() {
     try {
       await sequelize.authenticate();
       console.log('Database connection established successfully');
-      await sequelize.sync({ force: false });
-      console.log('Database synced successfully');
+      await sequelize.sync({ force: true });
+      console.log('Database synced successfully (tables recreated)');
       
       // Try to seed sample data
       try {
@@ -72,8 +72,8 @@ async function startServer() {
           console.log('Connected to new database successfully');
           
           // Create tables
-          await sequelize.sync({ force: false });
-          console.log('Tables created successfully');
+          await sequelize.sync({ force: true });
+          console.log('Tables created successfully (recreated)');
           
           // Try to seed sample data
           try {
