@@ -100,7 +100,98 @@ router.post('/', upload.single('zipFile'), async (req, res) => {
       }
     }
     
-    const userData = JSON.parse(fs.readFileSync(userDataPath, 'utf8'));
+    // Parse userData.json with error handling
+    let userData;
+    try {
+      const userDataContent = fs.readFileSync(userDataPath, 'utf8');
+      userData = JSON.parse(userDataContent);
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        console.error('JSON syntax error in userData.json:', error.message);
+        console.log('File content:', fs.readFileSync(userDataPath, 'utf8'));
+        throw new Error(`Invalid JSON syntax in userData.json: ${error.message}. Please check the file format.`);
+      } else {
+        throw new Error(`Failed to read userData.json: ${error.message}`);
+      }
+    }
+    
+    // Check if userData.json actually contains transaction data
+    if (Array.isArray(userData) && userData.length > 0 && userData[0].reference) {
+      console.log('userData.json contains transaction data, treating as transactions file');
+      // This is actually transaction data, so we need to find the real user data
+      // For now, we'll create a default user and process this as transactions
+      const defaultUser = {
+        firstName: 'Unknown',
+        lastName: 'User',
+        birthday: null,
+        country: null,
+        phone: null
+      };
+      
+      // Process the transactions from userData.json
+      const transactionsData = userData;
+      
+      // Create or update default user
+      let processedUser = null;
+      try {
+        const userId = `default-user-${Date.now()}`;
+        processedUser = await User.create({
+          userId: userId,
+          firstName: defaultUser.firstName,
+          lastName: defaultUser.lastName,
+          birthday: defaultUser.birthday,
+          country: defaultUser.country,
+          phone: defaultUser.phone,
+          avatar: avatarFileName
+        });
+      } catch (error) {
+        console.error('Error creating default user:', error);
+        throw new Error(`Failed to create default user: ${error.message}`);
+      }
+      
+      // Process transactions data
+      const processedTransactions = [];
+      for (const transaction of transactionsData) {
+        try {
+          const existingTransaction = await Transaction.findOne({ 
+            where: { reference: transaction.reference } 
+          });
+          
+          if (existingTransaction) {
+            await existingTransaction.update({
+              amount: transaction.amount,
+              currency: transaction.currency,
+              message: transaction.message,
+              timestamp: new Date(transaction.timestamp)
+            });
+            processedTransactions.push(existingTransaction);
+          } else {
+            const newTransaction = await Transaction.create({
+              reference: transaction.reference,
+              amount: transaction.amount,
+              currency: transaction.currency,
+              message: transaction.message,
+              timestamp: new Date(transaction.timestamp)
+            });
+            processedTransactions.push(newTransaction);
+          }
+        } catch (error) {
+          console.error(`Error processing transaction ${transaction.reference}:`, error);
+        }
+      }
+      
+      // Clean up temporary files
+      fs.rmSync(tempDir, { recursive: true, force: true });
+      fs.unlinkSync(zipPath);
+      
+      res.json({
+        message: 'ZIP file processed successfully (userData.json contained transaction data)',
+        userProcessed: !!processedUser,
+        transactionsProcessed: processedTransactions.length,
+        avatarProcessed: !!avatarFileName
+      });
+      return;
+    }
     
     // Read and process transactions.json
     let transactionsPath = findFileRecursively(tempDir, 'transactions.json');
@@ -126,7 +217,20 @@ router.post('/', upload.single('zipFile'), async (req, res) => {
       }
     }
     
-    const transactionsData = JSON.parse(fs.readFileSync(transactionsPath, 'utf8'));
+    // Parse transactions.json with error handling
+    let transactionsData;
+    try {
+      const transactionsContent = fs.readFileSync(transactionsPath, 'utf8');
+      transactionsData = JSON.parse(transactionsContent);
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        console.error('JSON syntax error in transactions.json:', error.message);
+        console.log('File content:', fs.readFileSync(transactionsPath, 'utf8'));
+        throw new Error(`Invalid JSON syntax in transactions.json: ${error.message}. Please check the file format.`);
+      } else {
+        throw new Error(`Failed to read transactions.json: ${error.message}`);
+      }
+    }
     
     // Process avatar.png if exists
     const avatarPath = findFileRecursively(tempDir, 'avatar.png');
