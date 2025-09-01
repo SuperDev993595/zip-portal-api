@@ -4,7 +4,7 @@ require('dotenv').config({ path: './config.env' });
 const sequelize = new Sequelize(
   process.env.DB_NAME || 'zipportal',
   process.env.DB_USER || 'root',
-  process.env.DB_PASSWORD || '',
+  process.env.DB_PASSWORD || 'Cd2Sz1zte8DF6vAr6u1kBVRL',
   {
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 3306,
